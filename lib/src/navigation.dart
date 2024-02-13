@@ -9,6 +9,8 @@ import 'package:lichess_mobile/src/view/home/home_tab_screen.dart';
 import 'package:lichess_mobile/src/view/puzzle/puzzle_tab_screen.dart';
 import 'package:lichess_mobile/src/view/tools/tools_tab_screen.dart';
 import 'package:lichess_mobile/src/view/watch/watch_tab_screen.dart';
+import 'package:lichess_mobile/src/utils/connectivity.dart';
+import 'package:lichess_mobile/src/widgets/feedback.dart';
 
 enum BottomTab {
   home(Icons.home),
@@ -106,6 +108,12 @@ class BottomNavScaffold extends ConsumerWidget {
     final currentTab = ref.watch(currentBottomTabProvider);
     final tabs = ref.watch(tabsProvider);
 
+    // Track and update a flag to check whether the user is online through the connectivity provider
+    bool userIsOnline = true;
+    ref.listen(connectivityChangesProvider, (_, connection) {
+      userIsOnline = connection.value!.isOnline;
+    });
+
     switch (Theme.of(context).platform) {
       case TargetPlatform.android:
         return NavigatorPopHandler(
@@ -124,7 +132,7 @@ class BottomNavScaffold extends ConsumerWidget {
                 for (final tab in tabs)
                   NavigationDestination(icon: tab.icon, label: tab.label),
               ],
-              onDestinationSelected: (i) => _onItemTapped(ref, i),
+              onDestinationSelected: (i) => _onItemTapped(context, ref, i, userIsOnline),
             ),
           ),
         );
@@ -137,7 +145,7 @@ class BottomNavScaffold extends ConsumerWidget {
               for (final tab in tabs)
                 BottomNavigationBarItem(icon: tab.icon, label: tab.label),
             ],
-            onTap: (i) => _onItemTapped(ref, i),
+            onTap: (i) => _onItemTapped(context, ref, i, userIsOnline),
           ),
         );
       default:
@@ -151,9 +159,16 @@ class BottomNavScaffold extends ConsumerWidget {
   /// If the route is already at the first route, scroll the tab's root
   /// scrollable to the top.
   /// Otherwise, switch to the tapped tab.
-  void _onItemTapped(WidgetRef ref, int index) {
+  void _onItemTapped(BuildContext context, WidgetRef ref, int index, bool userIsOnline) {
     final curTab = ref.read(currentBottomTabProvider);
     final tappedTab = BottomTab.values[index];
+
+    // Show that watch functionality is disabled if user is offline
+    if (tappedTab == BottomTab.watch && userIsOnline == false) {
+      showPlatformSnackbar(context, 'Watch functionality is unavailable while offline', type: SnackBarType.error);
+      return;
+    }
+
     if (tappedTab == curTab) {
       final navState = ref.read(currentNavigatorKeyProvider).currentState;
       if (navState?.canPop() == true) {

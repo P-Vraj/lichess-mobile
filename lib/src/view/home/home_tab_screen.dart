@@ -93,7 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeTabScreen> {
           const _SearchButton(),
           const _SettingsButton(),
           if (session != null)
-            const _RelationButton()
+            _RelationButton(wasOnline)
           else
             const SignInWidget(),
         ],
@@ -137,7 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeTabScreen> {
               children: [
                 const _SearchButton(),
                 const _SettingsButton(),
-                if (session != null) const _RelationButton(),
+                if (session != null) _RelationButton(wasOnline),
               ],
             ),
           ),
@@ -749,7 +749,8 @@ class _GamePreview<T> extends StatelessWidget {
 }
 
 class _RelationButton extends ConsumerWidget {
-  const _RelationButton();
+  final bool userIsOnline;
+  const _RelationButton(this.userIsOnline);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -757,12 +758,19 @@ class _RelationButton extends ConsumerWidget {
       icon: const Icon(Icons.people),
       semanticsLabel: context.l10n.friends,
       onPressed: () {
-        pushPlatformRoute(
-          context,
-          title: context.l10n.friends,
-          builder: (_) => const RelationScreen(),
-          fullscreenDialog: true,
-        );
+        // Use the userIsOnline flag to determine what to show
+        if (userIsOnline) {
+            pushPlatformRoute(
+              context,
+              title: context.l10n.friends,
+              builder: (_) => const RelationScreen(),
+              fullscreenDialog: true,
+            );
+        }
+        // Show error when offline
+        else {
+            showPlatformSnackbar(context, 'Friend list is unavailable while offline', type: SnackBarType.error);
+        }
       },
     );
   }
